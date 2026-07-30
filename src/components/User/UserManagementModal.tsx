@@ -13,7 +13,9 @@ import {
   Save,
   Check,
   Trash2,
-  KeyRound
+  KeyRound,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 interface UserManagementModalProps {
@@ -44,6 +46,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [email, setEmail] = useState(currentUser.email);
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatar_url);
   const [password, setPassword] = useState(currentUser.password || '1234');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
   // New User Form State
@@ -51,6 +54,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('1234');
   const [newAvatarUrl, setNewAvatarUrl] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   useEffect(() => {
     setFullName(currentUser.full_name);
@@ -149,7 +153,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
         {/* Tab Content */}
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-          {/* TAB 1: Edit My Profile & Password */}
+          {/* TAB 1: Edit My Profile & Toggleable Password */}
           {activeTab === 'profile' && (
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div className="flex items-center space-x-4 p-4 bg-slate-950/50 border border-slate-800 rounded-xl mb-4">
@@ -204,13 +208,23 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   <KeyRound className="w-3.5 h-3.5 text-amber-400" />
                   <span>Giriş Şifreniz</span>
                 </label>
-                <input
-                  type="text"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-amber-500"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-3.5 pr-10 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-1"
+                    title={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -279,7 +293,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                             )}
                           </div>
                           <div className="text-xs text-slate-400">{user.email}</div>
-                          <div className="text-[10px] text-slate-500 font-mono">Şifre: {user.password || '1234'}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">
+                            Şifre: ••••••••
+                          </div>
                         </div>
                       </div>
 
@@ -335,7 +351,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: Add New User Form with Password Field */}
+          {/* TAB 3: Add New User Form with Toggleable Password Field */}
           {activeTab === 'add_user' && (
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="p-3 bg-blue-950/40 border border-blue-800/40 rounded-xl text-xs text-slate-300">
@@ -374,14 +390,24 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                   Giriş Şifresi
                 </label>
-                <input
-                  type="text"
-                  placeholder="1234"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    placeholder="1234"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-3.5 pr-10 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-1"
+                    title={showNewPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div>
