@@ -1,16 +1,18 @@
 import React from 'react';
 import type { UserProfile } from '../../types';
-import { Image, User } from 'lucide-react';
+import { Image, Shield, LogIn } from 'lucide-react';
 
 interface NavbarProps {
   currentUser: UserProfile;
   onOpenAuth: () => void;
+  onOpenUserManagement: () => void;
   onOpenBackgroundPicker: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onOpenAuth,
+  onOpenUserManagement,
   onOpenBackgroundPicker
 }) => {
   return (
@@ -52,11 +54,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span className="hidden md:inline">Arkaplan Değiştir</span>
         </button>
 
-        {/* Current Active User Profile Badge */}
+        {/* User Management & Profile Settings Button */}
+        <button
+          onClick={onOpenUserManagement}
+          className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 text-xs font-semibold backdrop-blur-md transition-all duration-200 border border-blue-400/30 active:scale-95"
+          title="Kullanıcı & Profil Ayarları"
+        >
+          <Shield className="w-4 h-4 text-blue-300" />
+          <span className="hidden md:inline">Profil & Kullanıcılar</span>
+        </button>
+
+        {/* Active User Profile Badge */}
         <button
           onClick={onOpenAuth}
           className="flex items-center space-x-2.5 px-3 py-1.5 rounded-xl bg-slate-900/60 hover:bg-slate-900/80 border border-white/15 text-white text-xs font-medium backdrop-blur-lg transition-all duration-200 shadow-sm active:scale-95 group"
-          title="Giriş Yapılan Kullanıcı"
+          title="Kullanıcı Değiştir / Oturum"
         >
           <img
             src={currentUser.avatar_url}
@@ -72,7 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
           <div className="p-1 rounded-md bg-white/10 group-hover:bg-white/20 text-slate-300 transition-colors">
-            <User className="w-3.5 h-3.5" />
+            <LogIn className="w-3.5 h-3.5" />
           </div>
         </button>
       </div>

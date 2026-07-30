@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { UserProfile } from '../../types';
-import { PREDEFINED_USERS } from '../../lib/supabase';
-import { Check, ShieldCheck, X } from 'lucide-react';
+import { Check, ShieldCheck, X, Lock } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: UserProfile;
+  allUsers: UserProfile[];
   onSelectUser: (user: UserProfile) => void;
 }
 
@@ -14,9 +14,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   isOpen,
   onClose,
   currentUser,
+  allUsers,
   onSelectUser
 }) => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   if (!isOpen) return null;
+
+  const handleUserClick = (user: UserProfile) => {
+    if (!user.is_allowed) {
+      setErrorMessage(`"${user.full_name}" hesabının yetkili giriş izni kapalıdır. Sadece yetkili hesaplar giriş yapabilir.`);
+      return;
+    }
+    setErrorMessage(null);
+    onSelectUser(user);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fadeIn">
@@ -29,7 +42,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-lg text-white">Kullanıcı Girişi</h3>
-              <p className="text-xs text-slate-400">TANIMLI KULLANICI PROFİLLERİ</p>
+              <p className="text-xs text-slate-400">SADECE YETKİLİ KULLANICILAR</p>
             </div>
           </div>
           <button
@@ -43,23 +56,33 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {/* Content */}
         <div className="p-6 space-y-4">
           <p className="text-xs text-slate-300 bg-blue-950/40 border border-blue-800/40 rounded-lg p-3 leading-relaxed">
-            💡 <strong>Kalıcı Oturum:</strong> Giriş yaptığınız kullanıcı oturumu tarayıcınızda otomatik saklanır. Bir kez giriş yaptıktan sonra tekrar giriş yapmanız gerekmez.
+            🔒 <strong>Erişim Koruması:</strong> Şu an yalnızca sizin hesabınızın giriş izni tanımlıdır. Oturumunuz kalıcı saklanır.
           </p>
 
+          {errorMessage && (
+            <div className="p-3 bg-rose-950/60 border border-rose-800/60 text-rose-200 text-xs rounded-xl flex items-center justify-between animate-fadeIn">
+              <span>{errorMessage}</span>
+              <button onClick={() => setErrorMessage(null)} className="p-1 text-rose-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           <div className="space-y-2.5">
-            {PREDEFINED_USERS.map((user) => {
+            {allUsers.map((user) => {
               const isSelected = user.id === currentUser.id;
+              const isAllowed = user.is_allowed;
+
               return (
                 <button
                   key={user.id}
-                  onClick={() => {
-                    onSelectUser(user);
-                    onClose();
-                  }}
+                  onClick={() => handleUserClick(user)}
                   className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 text-left ${
                     isSelected
                       ? 'bg-blue-600/20 border-blue-500/60 ring-1 ring-blue-500/50 shadow-md shadow-blue-500/10'
-                      : 'bg-slate-800/40 border-slate-800 hover:bg-slate-800/80 hover:border-slate-700'
+                      : isAllowed
+                      ? 'bg-slate-800/40 border-slate-800 hover:bg-slate-800/80 hover:border-slate-700'
+                      : 'bg-slate-950/50 border-slate-800/60 opacity-60 hover:opacity-80'
                   }`}
                 >
                   <div className="flex items-center space-x-3.5">
@@ -76,16 +99,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                             Aktif
                           </span>
                         )}
+                        {!isAllowed && (
+                          <span className="bg-rose-500/20 text-rose-400 text-[10px] font-bold px-1.5 py-0.2 rounded-full border border-rose-500/30 flex items-center space-x-1">
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>İzin Yok</span>
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-slate-400">{user.email}</div>
                     </div>
                   </div>
 
-                  {isSelected && (
+                  {isSelected ? (
                     <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center">
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                     </div>
-                  )}
+                  ) : !isAllowed ? (
+                    <Lock className="w-4 h-4 text-slate-500" />
+                  ) : null}
                 </button>
               );
             })}
@@ -94,7 +125,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-4 bg-slate-950/60 border-t border-slate-800/80 text-center text-xs text-slate-400">
-          Giriş yapılan kullanıcı, yeni eklenen görevlerin sahibi olarak atanır.
+          Yetkili kullanıcıları 'Profil & Kullanıcılar' panelinden yönetebilirsiniz.
         </div>
       </div>
     </div>

@@ -4,30 +4,137 @@ import { INITIAL_BOARDS, INITIAL_TASKS, PREDEFINED_USERS, supabase } from '../li
 const BOARDS_KEY = 'appfabric_boards_v1';
 const TASKS_KEY = 'appfabric_tasks_v1';
 const USER_KEY = 'appfabric_active_user_v1';
+const USERS_LIST_KEY = 'appfabric_users_list_v2';
 const BACKGROUNDS_KEY = 'appfabric_user_backgrounds_v1';
 
 export class AppService {
-  // --- User Auth & Session ---
+  // --- User Management & Auth ---
+  static getUsers(): UserProfile[] {
+    try {
+      const saved = localStorage.getItem(USERS_LIST_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    localStorage.setItem(USERS_LIST_KEY, JSON.stringify(PREDEFINED_USERS));
+    return PREDEFINED_USERS;
+  }
+
+  static saveUsers(users: UserProfile[]) {
+    localStorage.setItem(USERS_LIST_KEY, JSON.stringify(users));
+  }
+
   static getActiveUser(): UserProfile {
+    const users = this.getUsers();
     try {
       const saved = localStorage.getItem(USER_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        const found = users.find(u => u.id === parsed.id && u.is_allowed);
+        if (found) return found;
       }
     } catch {
       // Fallback
     }
-    const defaultUser = PREDEFINED_USERS[0];
-    localStorage.setItem(USER_KEY, JSON.stringify(defaultUser));
-    return defaultUser;
+    // Default to first allowed user (Salika)
+    const allowedUser = users.find(u => u.is_allowed) || users[0];
+    localStorage.setItem(USER_KEY, JSON.stringify(allowedUser));
+    return allowedUser;
   }
 
   static setActiveUser(user: UserProfile) {
+    if (!user.is_allowed) {
+      throw new Error('Bu kullanıcının yetkili giriş izni yoktur.');
+    }
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
-  static getUsers(): UserProfile[] {
-    return PREDEFINED_USERS;
+  static updateUserProfile(userId: string, updates: Partial<UserProfile>): UserProfile[] {
+    const users = this.getUsers();
+    const updated = users.map(u => (u.id === userId ? { ...u, ...updates } : u));
+    this.saveUsers(updated);
+
+    // If current active user profile was edited, update active user session
+    const active = this.getActiveUser();
+    if (active.id === userId) {
+      const updatedActive = { ...active, ...updates };
+      localStorage.setItem(USER_KEY, JSON.stringify(updatedActive));
+    }
+
+    // Mirror to Supabase async
+    supabase.from('profiles').update(updates).eq('id', userId);
+
+    return updated;
+  }
+
+  static toggleUserAccess(userId: string): UserProfile[] {
+    const users = this.getUsers();
+    const updated = users.map(u => {
+      if (u.id === userId) {
+        return { ...u, is_allowed: !u.is_allowed };
+      }
+      return u;
+    });
+    this.saveUsers(updated);
+    return updated;
+  }
+
+  static addUser(fullName: string, email: string, avatarUrl?: string): UserProfile[] {
+    const users = this.getUsers();
+    const newUser: UserProfile = {
+      id: 'usr_' + Date.now(),
+      email: email.trim(),
+      full_name: fullName.trim(),
+      avatar_url: avatarUrl?.trim() || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+      background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
+      role: 'user',
+      is_allowed: true // Admin yeni kullanıcı eklediğinde varsayılan erişim verilsin
+    };
+
+    const updated = [...users, newUser];
+    this.saveUsers(updated);
+
+    // Insert to Supabase async
+    supabase.from('profiles').insert([{
+      id: newUser.id,
+      email: newUser.email,
+      full_name: newUser.full_name,
+      avatar_url: newUser.avatar_url,
+      background_url: newUser.background_url
+    }]);
+
+    return updated;
+  }
+
+  static deleteUser(userId: string): UserProfile[] {
+    const active = this.getActiveUser();
+    if (active.id === userId) {
+      throw new Error('Aktif kendi hesabınızı silemezsiniz.');
+    }
+
+    const users = this.getUsers();
+    const updatedUsers = users.filter(u => u.id !== userId);
+    this.saveUsers(updatedUsers);
+
+    // Reassign tasks belonging to deleted user to active user
+    const currentTasks = this.getTasks();
+    const updatedTasks = currentTasks.map(t => {
+      if (t.assigned_to === userId) {
+        return { ...t, assigned_to: active.id };
+      }
+      return t;
+    });
+    this.saveTasks(updatedTasks);
+
+    // Delete from Supabase async
+    supabase.from('profiles').delete().eq('id', userId);
+
+    return updatedUsers;
   }
 
   // --- Background Wallpapers ---
@@ -41,7 +148,7 @@ export class AppService {
     } catch {
       // ignore
     }
-    const user = PREDEFINED_USERS.find(u => u.id === userId);
+    const user = this.getUsers().find(u => u.id === userId);
     return user?.background_url || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80';
   }
 

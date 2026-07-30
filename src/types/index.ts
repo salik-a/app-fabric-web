@@ -4,6 +4,8 @@ export interface UserProfile {
   full_name: string;
   avatar_url: string;
   background_url?: string;
+  role?: 'admin' | 'user';
+  is_allowed?: boolean;
   created_at?: string;
 }
 

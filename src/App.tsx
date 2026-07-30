@@ -7,12 +7,14 @@ import { AddBoardCard } from './components/Board/AddBoardCard';
 import { LoginModal } from './components/Auth/LoginModal';
 import { BackgroundPickerModal } from './components/Background/BackgroundPickerModal';
 import { TaskDetailModal } from './components/Task/TaskDetailModal';
+import { UserManagementModal } from './components/User/UserManagementModal';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import confetti from 'canvas-confetti';
 
 export const App: React.FC = () => {
   // --- States ---
+  const [allUsers, setAllUsers] = useState<UserProfile[]>(() => AppService.getUsers());
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => AppService.getActiveUser());
   const [backgroundUrl, setBackgroundUrl] = useState<string>(() =>
     AppService.getUserBackground(currentUser.id)
@@ -23,6 +25,7 @@ export const App: React.FC = () => {
 
   // Modals
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
   const [isBgPickerOpen, setIsBgPickerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -32,10 +35,41 @@ export const App: React.FC = () => {
     setBackgroundUrl(bg);
   }, [currentUser]);
 
-  // --- Handlers ---
+  // --- User Management Handlers ---
   const handleSelectUser = (user: UserProfile) => {
-    setCurrentUser(user);
-    AppService.setActiveUser(user);
+    try {
+      AppService.setActiveUser(user);
+      setCurrentUser(user);
+    } catch (err: any) {
+      alert(err.message || 'Giriş yapılamadı.');
+    }
+  };
+
+  const handleUpdateProfile = (userId: string, updates: Partial<UserProfile>) => {
+    const updatedUsers = AppService.updateUserProfile(userId, updates);
+    setAllUsers(updatedUsers);
+    const updatedActive = AppService.getActiveUser();
+    setCurrentUser(updatedActive);
+  };
+
+  const handleToggleUserAccess = (userId: string) => {
+    const updatedUsers = AppService.toggleUserAccess(userId);
+    setAllUsers(updatedUsers);
+  };
+
+  const handleAddUser = (fullName: string, email: string, avatarUrl?: string) => {
+    const updatedUsers = AppService.addUser(fullName, email, avatarUrl);
+    setAllUsers(updatedUsers);
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    try {
+      const updatedUsers = AppService.deleteUser(userId);
+      setAllUsers(updatedUsers);
+      setTasks(AppService.getTasks());
+    } catch (err: any) {
+      alert(err.message || 'Kullanıcı silinemedi.');
+    }
   };
 
   const handleSelectBackground = (url: string) => {
@@ -77,7 +111,6 @@ export const App: React.FC = () => {
     const updated = AppService.toggleTaskCompletion(taskId);
     setTasks(updated);
 
-    // Trigger celebratory confetti if task was marked complete
     if (taskBefore && !taskBefore.is_completed) {
       confetti({
         particleCount: 50,
@@ -106,7 +139,6 @@ export const App: React.FC = () => {
       return;
     }
 
-    // 1. Dragging Boards Horizontally
     if (type === 'BOARD') {
       const reordered = Array.from(boards);
       const [removed] = reordered.splice(source.index, 1);
@@ -122,7 +154,6 @@ export const App: React.FC = () => {
       return;
     }
 
-    // 2. Dragging Tasks Vertically (within or between boards)
     if (type === 'TASK') {
       const destBoardId = destination.droppableId;
 
@@ -131,20 +162,15 @@ export const App: React.FC = () => {
       if (taskIndex === -1) return;
 
       const [targetTask] = updatedTasks.splice(taskIndex, 1);
-
-      // Change board_id if moved to another board
       targetTask.board_id = destBoardId;
 
-      // Filter tasks in destination board
       const destBoardTasks = updatedTasks.filter((t) => t.board_id === destBoardId);
       destBoardTasks.splice(destination.index, 0, targetTask);
 
-      // Reassign positions for destination board tasks
       destBoardTasks.forEach((t, idx) => {
         t.position = idx;
       });
 
-      // Combine back with tasks from other boards
       const otherBoardTasks = updatedTasks.filter((t) => t.board_id !== destBoardId);
       const finalTasks = [...otherBoardTasks, ...destBoardTasks].sort(
         (a, b) => a.position - b.position
@@ -169,10 +195,11 @@ export const App: React.FC = () => {
       <Navbar
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenBackgroundPicker={() => setIsBgPickerOpen(true)}
       />
 
-      {/* Horizontal Boards Scroll Container (Sağa doğru uzayan panolar) */}
+      {/* Horizontal Boards Scroll Container */}
       <main className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 custom-scrollbar">
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="all-boards" direction="horizontal" type="BOARD">
@@ -204,7 +231,6 @@ export const App: React.FC = () => {
                 })}
                 {provided.placeholder}
 
-                {/* Add New Board Button Card (+ Başka pano ekleyin) */}
                 <AddBoardCard onAddBoard={handleAddBoard} />
               </div>
             )}
@@ -217,7 +243,19 @@ export const App: React.FC = () => {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         currentUser={currentUser}
+        allUsers={allUsers}
         onSelectUser={handleSelectUser}
+      />
+
+      <UserManagementModal
+        isOpen={isUserManagementOpen}
+        onClose={() => setIsUserManagementOpen(false)}
+        currentUser={currentUser}
+        allUsers={allUsers}
+        onUpdateProfile={handleUpdateProfile}
+        onToggleUserAccess={handleToggleUserAccess}
+        onAddUser={handleAddUser}
+        onDeleteUser={handleDeleteUser}
       />
 
       <BackgroundPickerModal
