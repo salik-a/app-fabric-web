@@ -6,6 +6,7 @@ export interface UserProfile {
   background_url?: string;
   role?: 'admin' | 'user';
   is_allowed?: boolean;
+  password?: string;
   created_at?: string;
 }
 

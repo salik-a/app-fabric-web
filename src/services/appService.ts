@@ -4,11 +4,12 @@ import { INITIAL_BOARDS, INITIAL_TASKS, PREDEFINED_USERS, supabase } from '../li
 const BOARDS_KEY = 'appfabric_boards_v1';
 const TASKS_KEY = 'appfabric_tasks_v1';
 const USER_KEY = 'appfabric_active_user_v1';
-const USERS_LIST_KEY = 'appfabric_users_list_v2';
+const USERS_LIST_KEY = 'appfabric_users_list_v3';
 const BACKGROUNDS_KEY = 'appfabric_user_backgrounds_v1';
+const AUTH_SESSION_KEY = 'appfabric_is_authenticated_v1';
 
 export class AppService {
-  // --- User Management & Auth ---
+  // --- User Authentication & Session ---
   static getUsers(): UserProfile[] {
     try {
       const saved = localStorage.getItem(USERS_LIST_KEY);
@@ -29,6 +30,36 @@ export class AppService {
     localStorage.setItem(USERS_LIST_KEY, JSON.stringify(users));
   }
 
+  static isAuthenticated(): boolean {
+    return localStorage.getItem(AUTH_SESSION_KEY) === 'true';
+  }
+
+  static loginWithEmailAndPassword(emailInput: string, passwordInput: string): UserProfile {
+    const users = this.getUsers();
+    const targetEmail = emailInput.trim().toLowerCase();
+
+    const user = users.find(u => u.email.trim().toLowerCase() === targetEmail);
+
+    if (!user) {
+      throw new Error('Girdiğiniz e-posta adresi ile kayıtlı kullanıcı bulunamadı.');
+    }
+
+    if (!user.is_allowed) {
+      throw new Error(`"${user.full_name}" kullanıcısının yetkili giriş izni kilitlidir.`);
+    }
+
+    const expectedPassword = user.password || '1234';
+    if (passwordInput.trim() !== expectedPassword) {
+      throw new Error('Hatalı şifre girdiniz. Lütfen tekrar deneyin.');
+    }
+
+    // Set active user & save persistent authenticated session
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    localStorage.setItem(AUTH_SESSION_KEY, 'true');
+
+    return user;
+  }
+
   static getActiveUser(): UserProfile {
     const users = this.getUsers();
     try {
@@ -41,7 +72,6 @@ export class AppService {
     } catch {
       // Fallback
     }
-    // Default to first allowed user (Salika)
     const allowedUser = users.find(u => u.is_allowed) || users[0];
     localStorage.setItem(USER_KEY, JSON.stringify(allowedUser));
     return allowedUser;
@@ -59,14 +89,12 @@ export class AppService {
     const updated = users.map(u => (u.id === userId ? { ...u, ...updates } : u));
     this.saveUsers(updated);
 
-    // If current active user profile was edited, update active user session
     const active = this.getActiveUser();
     if (active.id === userId) {
       const updatedActive = { ...active, ...updates };
       localStorage.setItem(USER_KEY, JSON.stringify(updatedActive));
     }
 
-    // Mirror to Supabase async
     supabase.from('profiles').update(updates).eq('id', userId);
 
     return updated;
@@ -84,22 +112,22 @@ export class AppService {
     return updated;
   }
 
-  static addUser(fullName: string, email: string, avatarUrl?: string): UserProfile[] {
+  static addUser(fullName: string, email: string, passwordInput?: string, avatarUrl?: string): UserProfile[] {
     const users = this.getUsers();
     const newUser: UserProfile = {
       id: 'usr_' + Date.now(),
       email: email.trim(),
       full_name: fullName.trim(),
+      password: passwordInput?.trim() || '1234',
       avatar_url: avatarUrl?.trim() || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
       background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
       role: 'user',
-      is_allowed: true // Admin yeni kullanıcı eklediğinde varsayılan erişim verilsin
+      is_allowed: true
     };
 
     const updated = [...users, newUser];
     this.saveUsers(updated);
 
-    // Insert to Supabase async
     supabase.from('profiles').insert([{
       id: newUser.id,
       email: newUser.email,
@@ -121,7 +149,6 @@ export class AppService {
     const updatedUsers = users.filter(u => u.id !== userId);
     this.saveUsers(updatedUsers);
 
-    // Reassign tasks belonging to deleted user to active user
     const currentTasks = this.getTasks();
     const updatedTasks = currentTasks.map(t => {
       if (t.assigned_to === userId) {
@@ -131,10 +158,13 @@ export class AppService {
     });
     this.saveTasks(updatedTasks);
 
-    // Delete from Supabase async
     supabase.from('profiles').delete().eq('id', userId);
 
     return updatedUsers;
+  }
+
+  static logout() {
+    localStorage.removeItem(AUTH_SESSION_KEY);
   }
 
   // --- Background Wallpapers ---

@@ -5,6 +5,7 @@ import { Navbar } from './components/Header/Navbar';
 import { BoardColumn } from './components/Board/BoardColumn';
 import { AddBoardCard } from './components/Board/AddBoardCard';
 import { LoginModal } from './components/Auth/LoginModal';
+import { AuthLockScreen } from './components/Auth/AuthLockScreen';
 import { BackgroundPickerModal } from './components/Background/BackgroundPickerModal';
 import { TaskDetailModal } from './components/Task/TaskDetailModal';
 import { UserManagementModal } from './components/User/UserManagementModal';
@@ -13,6 +14,11 @@ import type { DropResult } from '@hello-pangea/dnd';
 import confetti from 'canvas-confetti';
 
 export const App: React.FC = () => {
+  // --- Master Authentication State ---
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
+    AppService.isAuthenticated()
+  );
+
   // --- States ---
   const [allUsers, setAllUsers] = useState<UserProfile[]>(() => AppService.getUsers());
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => AppService.getActiveUser());
@@ -34,6 +40,14 @@ export const App: React.FC = () => {
     const bg = AppService.getUserBackground(currentUser.id);
     setBackgroundUrl(bg);
   }, [currentUser]);
+
+  // Master Login Handler (Email & Password)
+  const handleLogin = (emailInput: string, passwordInput: string): UserProfile => {
+    const user = AppService.loginWithEmailAndPassword(emailInput, passwordInput);
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    return user;
+  };
 
   // --- User Management Handlers ---
   const handleSelectUser = (user: UserProfile) => {
@@ -57,8 +71,8 @@ export const App: React.FC = () => {
     setAllUsers(updatedUsers);
   };
 
-  const handleAddUser = (fullName: string, email: string, avatarUrl?: string) => {
-    const updatedUsers = AppService.addUser(fullName, email, avatarUrl);
+  const handleAddUser = (fullName: string, email: string, passwordInput?: string, avatarUrl?: string) => {
+    const updatedUsers = AppService.addUser(fullName, email, passwordInput, avatarUrl);
     setAllUsers(updatedUsers);
   };
 
@@ -180,6 +194,11 @@ export const App: React.FC = () => {
       AppService.saveTasks(finalTasks);
     }
   };
+
+  // Render Authentication Lock Screen if not authenticated
+  if (!isAuthenticated) {
+    return <AuthLockScreen onLogin={handleLogin} />;
+  }
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative select-none">

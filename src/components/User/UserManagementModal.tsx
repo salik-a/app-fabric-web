@@ -12,7 +12,8 @@ import {
   Image as ImageIcon,
   Save,
   Check,
-  Trash2
+  Trash2,
+  KeyRound
 } from 'lucide-react';
 
 interface UserManagementModalProps {
@@ -22,7 +23,7 @@ interface UserManagementModalProps {
   allUsers: UserProfile[];
   onUpdateProfile: (userId: string, updates: Partial<UserProfile>) => void;
   onToggleUserAccess: (userId: string) => void;
-  onAddUser: (fullName: string, email: string, avatarUrl?: string) => void;
+  onAddUser: (fullName: string, email: string, passwordInput?: string, avatarUrl?: string) => void;
   onDeleteUser: (userId: string) => void;
 }
 
@@ -42,18 +43,21 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [fullName, setFullName] = useState(currentUser.full_name);
   const [email, setEmail] = useState(currentUser.email);
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatar_url);
+  const [password, setPassword] = useState(currentUser.password || '1234');
   const [isSaved, setIsSaved] = useState(false);
 
   // New User Form State
   const [newFullName, setNewFullName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('1234');
   const [newAvatarUrl, setNewAvatarUrl] = useState('');
 
   useEffect(() => {
     setFullName(currentUser.full_name);
     setEmail(currentUser.email);
     setAvatarUrl(currentUser.avatar_url);
-  }, [currentUser]);
+    setPassword(currentUser.password || '1234');
+  }, [currentUser, isOpen]);
 
   if (!isOpen) return null;
 
@@ -62,8 +66,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     onUpdateProfile(currentUser.id, {
       full_name: fullName.trim(),
       email: email.trim(),
-      avatar_url: avatarUrl.trim()
+      avatar_url: avatarUrl.trim(),
+      password: password.trim()
     });
+
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
   };
@@ -71,9 +77,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (newFullName.trim() && newEmail.trim()) {
-      onAddUser(newFullName.trim(), newEmail.trim(), newAvatarUrl.trim());
+      onAddUser(newFullName.trim(), newEmail.trim(), newPassword.trim(), newAvatarUrl.trim());
       setNewFullName('');
       setNewEmail('');
+      setNewPassword('1234');
       setNewAvatarUrl('');
       setActiveTab('users');
     }
@@ -112,7 +119,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             }`}
           >
             <User className="w-4 h-4" />
-            <span>Kendi Bilgilerim</span>
+            <span>Kendi Bilgilerim & Şifrem</span>
           </button>
 
           <button
@@ -124,7 +131,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             }`}
           >
             <UserCheck className="w-4 h-4" />
-            <span>Kullanıcı İzinleri & Yönetimi ({allUsers.length})</span>
+            <span>Kullanıcı İzinleri ({allUsers.length})</span>
           </button>
 
           <button
@@ -142,7 +149,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
         {/* Tab Content */}
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-          {/* TAB 1: Edit My Profile */}
+          {/* TAB 1: Edit My Profile & Password */}
           {activeTab === 'profile' && (
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div className="flex items-center space-x-4 p-4 bg-slate-950/50 border border-slate-800 rounded-xl mb-4">
@@ -181,13 +188,27 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center space-x-1.5">
                   <Mail className="w-3.5 h-3.5 text-purple-400" />
-                  <span>E-posta Adresi</span>
+                  <span>E-posta Adresi (Giriş Kullanıcı Adı)</span>
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center space-x-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Giriş Şifreniz</span>
+                </label>
+                <input
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
@@ -219,7 +240,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      <span>Profil Bilgilerini Kaydet</span>
+                      <span>Profil & Şifre Bilgilerini Kaydet</span>
                     </>
                   )}
                 </button>
@@ -258,6 +279,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                             )}
                           </div>
                           <div className="text-xs text-slate-400">{user.email}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">Şifre: {user.password || '1234'}</div>
                         </div>
                       </div>
 
@@ -313,11 +335,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: Add New User Form */}
+          {/* TAB 3: Add New User Form with Password Field */}
           {activeTab === 'add_user' && (
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="p-3 bg-blue-950/40 border border-blue-800/40 rounded-xl text-xs text-slate-300">
-                ➕ Ekleyeceğiniz yeni kullanıcı profil bilgileri veritabanında saklanır ve otomatik olarak görev atama & giriş listesine dahil edilir.
+                ➕ Ekleyeceğiniz yeni kullanıcının adı, e-posta adresi ve giriş şifresi tanımlanır. Kullanıcı kendi e-postası ve şifresi ile sisteme giriş yapabilir.
               </div>
 
               <div>
@@ -336,7 +358,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  E-posta Adresi
+                  E-posta Adresi (Giriş Kullanıcı Adı)
                 </label>
                 <input
                   type="email"
@@ -344,6 +366,20 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Giriş Şifresi
+                </label>
+                <input
+                  type="text"
+                  placeholder="1234"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
                   required
                 />
               </div>
@@ -364,7 +400,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={!newFullName.trim() || !newEmail.trim()}
+                  disabled={!newFullName.trim() || !newEmail.trim() || !newPassword.trim()}
                   className="flex items-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-md transition-colors"
                 >
                   <UserPlus className="w-4 h-4" />

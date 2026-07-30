@@ -6,16 +6,17 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJ
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Default Predefined users (Only Salika has is_allowed: true right now)
+// Predefined users (Salika is primary admin with salikalper@gmail.com)
 export const PREDEFINED_USERS: UserProfile[] = [
   {
     id: 'usr_salika',
-    email: 'salika@appfabric.com',
+    email: 'salikalper@gmail.com',
     full_name: 'Salika',
     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
     role: 'admin',
-    is_allowed: true // ŞU AN SADECE SALİKA GİRİŞ YAPABİLİR
+    is_allowed: true,
+    password: '1234' // Default password for Salika (editable anytime)
   },
   {
     id: 'usr_ahmet',
@@ -24,7 +25,8 @@ export const PREDEFINED_USERS: UserProfile[] = [
     avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
     role: 'user',
-    is_allowed: false // Giriş izni henüz kapalı
+    is_allowed: true,
+    password: '1234'
   },
   {
     id: 'usr_zeynep',
@@ -33,16 +35,8 @@ export const PREDEFINED_USERS: UserProfile[] = [
     avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
     background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
     role: 'user',
-    is_allowed: false // Giriş izni henüz kapalı
-  },
-  {
-    id: 'usr_admin',
-    email: 'admin@appfabric.com',
-    full_name: 'Sistem Yöneticisi',
-    avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-    background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
-    role: 'user',
-    is_allowed: false // Giriş izni henüz kapalı
+    is_allowed: true,
+    password: '1234'
   }
 ];
 
