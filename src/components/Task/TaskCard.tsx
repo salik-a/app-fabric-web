@@ -25,11 +25,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   return (
     <div
       onClick={() => onSelectTask(task)}
-      className={`group relative bg-white hover:bg-slate-50/90 border border-slate-200/90 hover:border-slate-300 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer select-none ${
+      className={`group relative bg-white hover:bg-slate-50/90 border border-slate-200/80 hover:border-slate-300 rounded-lg px-2.5 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-sm transition-all duration-150 cursor-pointer select-none ${
         task.is_completed ? 'bg-slate-50/70 border-slate-200' : ''
       }`}
     >
-      <div className="flex items-start space-x-2.5">
+      <div className="flex items-start space-x-2">
         {/* Left Side: Completion Toggle Checkbox */}
         <button
           type="button"
@@ -38,11 +38,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           title={task.is_completed ? 'Tamamlanmadı yap' : 'Tamamlandı işaretle'}
         >
           {task.is_completed ? (
-            <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-sm">
-              <CheckCircle2 className="w-4 h-4 fill-emerald-600 text-white" />
+            <div className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+              <CheckCircle2 className="w-3.5 h-3.5 fill-emerald-600 text-white" />
             </div>
           ) : (
-            <Circle className="w-5 h-5 opacity-40 group-hover:opacity-100 group-hover:text-emerald-600 transition-opacity stroke-[1.8]" />
+            <Circle className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-emerald-600 transition-opacity stroke-[1.8]" />
           )}
         </button>
 
@@ -59,9 +59,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </p>
 
           {/* Footer Metadata & User Avatar */}
-          <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
             {task.description ? (
-              <span className="truncate text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+              <span className="truncate text-slate-400 bg-slate-100 px-1 py-0.2 rounded text-[10px] font-medium">
                 Açıklama var
               </span>
             ) : (
@@ -77,7 +77,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 <img
                   src={assignedUser.avatar_url}
                   alt={assignedUser.full_name}
-                  className="w-5 h-5 rounded-full object-cover border border-slate-200"
+                  className="w-4 h-4 rounded-full object-cover border border-slate-200 shadow-xs"
                 />
               </div>
             )}
