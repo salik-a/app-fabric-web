@@ -220,6 +220,7 @@ export const App: React.FC = () => {
                       board={board}
                       tasks={boardTasks}
                       index={index}
+                      allUsers={allUsers}
                       onAddTask={handleAddTask}
                       onToggleCompleteTask={handleToggleCompleteTask}
                       onSelectTask={(task) => setSelectedTask(task)}
@@ -268,6 +269,7 @@ export const App: React.FC = () => {
       <TaskDetailModal
         task={selectedTask}
         boards={boards}
+        allUsers={allUsers}
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onUpdateTask={handleUpdateTask}

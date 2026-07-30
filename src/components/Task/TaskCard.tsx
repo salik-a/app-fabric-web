@@ -1,22 +1,23 @@
 import React from 'react';
-import type { Task } from '../../types';
-import { PREDEFINED_USERS } from '../../lib/supabase';
+import type { Task, UserProfile } from '../../types';
 import { CheckCircle2, Circle } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
   index: number;
+  allUsers: UserProfile[];
   onToggleComplete: (taskId: string, e: React.MouseEvent) => void;
   onSelectTask: (task: Task) => void;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
+  allUsers,
   onToggleComplete,
   onSelectTask
 }) => {
-  // Find assigned user profile
-  const assignedUser = PREDEFINED_USERS.find((u) => u.id === task.assigned_to) || {
+  // Find assigned user profile dynamically from allUsers
+  const assignedUser = allUsers.find((u) => u.id === task.assigned_to) || {
     full_name: 'Atanmamış',
     avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
   };

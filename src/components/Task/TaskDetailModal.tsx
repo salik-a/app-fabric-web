@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Task, Board } from '../../types';
-import { PREDEFINED_USERS } from '../../lib/supabase';
+import type { Task, Board, UserProfile } from '../../types';
 import {
   X,
   User,
@@ -14,6 +13,7 @@ import {
 interface TaskDetailModalProps {
   task: Task | null;
   boards: Board[];
+  allUsers: UserProfile[];
   isOpen: boolean;
   onClose: () => void;
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
@@ -23,6 +23,7 @@ interface TaskDetailModalProps {
 export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   task,
   boards,
+  allUsers,
   isOpen,
   onClose,
   onUpdateTask,
@@ -43,7 +44,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   if (!isOpen || !task) return null;
 
   const currentBoard = boards.find((b) => b.id === task.board_id);
-  const creatorUser = PREDEFINED_USERS.find((u) => u.id === task.created_by);
+  const creatorUser = allUsers.find((u) => u.id === task.created_by);
 
   const handleSave = () => {
     onUpdateTask(task.id, {
@@ -111,7 +112,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-medium text-white focus:outline-none focus:border-blue-500 transition-colors"
               >
-                {PREDEFINED_USERS.map((u) => (
+                {allUsers.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.full_name} ({u.email})
                   </option>

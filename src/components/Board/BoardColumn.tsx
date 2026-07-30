@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Board, Task } from '../../types';
+import type { Board, Task, UserProfile } from '../../types';
 import { TaskCard } from '../Task/TaskCard';
 import { BoardHeaderMenu } from './BoardHeaderMenu';
 import { Plus, MoreHorizontal, X, FilePlus } from 'lucide-react';
@@ -9,6 +9,7 @@ interface BoardColumnProps {
   board: Board;
   tasks: Task[];
   index: number;
+  allUsers: UserProfile[];
   onAddTask: (boardId: string, title: string) => void;
   onToggleCompleteTask: (taskId: string, e: React.MouseEvent) => void;
   onSelectTask: (task: Task) => void;
@@ -21,6 +22,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
   board,
   tasks,
   index,
+  allUsers,
   onAddTask,
   onToggleCompleteTask,
   onSelectTask,
@@ -112,6 +114,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
                         <TaskCard
                           task={task}
                           index={taskIndex}
+                          allUsers={allUsers}
                           onToggleComplete={onToggleCompleteTask}
                           onSelectTask={onSelectTask}
                         />

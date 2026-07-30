@@ -1,6 +1,7 @@
 import React from 'react';
 import type { UserProfile } from '../../types';
 import { Image, Shield, LogIn } from 'lucide-react';
+import appLogo from '../../assets/appfabric_logo.jpg';
 
 interface NavbarProps {
   currentUser: UserProfile;
@@ -21,7 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="flex items-center space-x-3">
         <div className="relative group">
           <img
-            src="/appfabric_logo.jpg"
+            src={appLogo}
             alt="AppFabric Logo"
             className="w-10 h-10 rounded-xl object-cover border border-white/20 shadow-lg shadow-blue-500/20 transition-transform duration-300 group-hover:scale-105"
           />
