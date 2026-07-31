@@ -11,11 +11,14 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecoveryLoading, setIsRecoveryLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setSuccessMessage(null);
     setIsLoading(true);
 
     try {
@@ -27,6 +30,28 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
       setPassword('');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!email.trim()) {
+      setErrorMessage('Önce e-posta adresinizi yazın.');
+      return;
+    }
+
+    setIsRecoveryLoading(true);
+    try {
+      await AppService.sendPasswordReset(email);
+      setSuccessMessage(
+        'Hesap tanımlıysa şifre sıfırlama bağlantısı e-posta adresinize gönderildi.'
+      );
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Şifre sıfırlama isteği gönderilemedi.');
+    } finally {
+      setIsRecoveryLoading(false);
     }
   };
 
@@ -79,6 +104,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
               onChange={(e) => {
                 setEmail(e.target.value);
                 setErrorMessage(null);
+                setSuccessMessage(null);
               }}
               className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none transition-all"
             />
@@ -86,11 +112,19 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
 
           {/* Password Input */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
               <span className="flex items-center space-x-1.5">
                 <KeyRound className="w-3.5 h-3.5 text-amber-400" />
                 <span>Giriş Şifreniz</span>
               </span>
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                disabled={isLoading || isRecoveryLoading}
+                className="normal-case tracking-normal text-blue-300 hover:text-blue-200 disabled:opacity-50"
+              >
+                {isRecoveryLoading ? 'Gönderiliyor...' : 'Şifremi unuttum'}
+              </button>
             </label>
             <input
               type="password"
@@ -100,6 +134,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
               onChange={(e) => {
                 setPassword(e.target.value);
                 setErrorMessage(null);
+                setSuccessMessage(null);
               }}
               className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none transition-all"
             />
@@ -109,6 +144,13 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
             <div className="p-3 bg-rose-950/60 border border-rose-800/60 text-rose-300 text-xs rounded-xl flex items-center space-x-2 animate-fadeIn">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
               <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="p-3 bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-xs rounded-xl flex items-center space-x-2 animate-fadeIn">
+              <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{successMessage}</span>
             </div>
           )}
 

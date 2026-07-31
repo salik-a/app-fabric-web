@@ -1,4 +1,5 @@
 import type { Board, Task, UserProfile } from '../types';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 const BOARDS_KEY = 'appfabric_boards_v2';
@@ -13,6 +14,13 @@ const DEFAULT_BACKGROUND =
   'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80';
 const PROFILE_COLUMNS =
   'id,email,full_name,avatar_url,background_url,role,is_allowed,created_at';
+
+const appBaseUrl = (): string => {
+  const url = new URL(import.meta.env.BASE_URL, window.location.href);
+  url.hash = '';
+  url.search = '';
+  return url.toString();
+};
 
 type AdminActionResult = {
   profile?: UserProfile;
@@ -125,7 +133,29 @@ export class AppService {
     const password = passwordInput;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error || !data.user) {
+    if (error) {
+      if (
+        isAuthRetryableFetchError(error) ||
+        error.status === 0 ||
+        (typeof error.status === 'number' && error.status >= 500)
+      ) {
+        throw new Error(
+          'Supabase sunucusuna ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.'
+        );
+      }
+
+      if (error.code === 'email_not_confirmed') {
+        throw new Error('E-posta adresiniz henüz doğrulanmamış.');
+      }
+
+      if (error.code === 'invalid_credentials') {
+        throw new Error('E-posta adresi veya şifre hatalı.');
+      }
+
+      throw new Error('Giriş işlemi tamamlanamadı. Lütfen tekrar deneyin.');
+    }
+
+    if (!data.user) {
       throw new Error('E-posta adresi veya şifre hatalı.');
     }
 
@@ -138,6 +168,34 @@ export class AppService {
       await supabase.auth.signOut();
       throw profileError;
     }
+  }
+
+  static async sendPasswordReset(emailInput: string): Promise<void> {
+    const email = emailInput.trim().toLowerCase();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: appBaseUrl()
+    });
+
+    if (error) {
+      if (
+        isAuthRetryableFetchError(error) ||
+        error.status === 0 ||
+        (typeof error.status === 'number' && error.status >= 500)
+      ) {
+        throw new Error(
+          'Supabase sunucusuna ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.'
+        );
+      }
+      throw new Error('Şifre sıfırlama e-postası gönderilemedi. Lütfen tekrar deneyin.');
+    }
+  }
+
+  static async updateRecoveredPassword(newPassword: string): Promise<void> {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      throw new Error(errorMessage(error, 'Yeni şifre kaydedilemedi.'));
+    }
+    await this.logout();
   }
 
   static async logout() {

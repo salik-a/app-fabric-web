@@ -5,6 +5,8 @@ import { Navbar } from './components/Header/Navbar';
 import { BoardColumn } from './components/Board/BoardColumn';
 import { AddBoardCard } from './components/Board/AddBoardCard';
 import { AuthLockScreen } from './components/Auth/AuthLockScreen';
+import { PasswordRecoveryScreen } from './components/Auth/PasswordRecoveryScreen';
+import { supabase } from './lib/supabase';
 import { BackgroundPickerModal } from './components/Background/BackgroundPickerModal';
 import { TaskDetailModal } from './components/Task/TaskDetailModal';
 import { UserManagementModal } from './components/User/UserManagementModal';
@@ -15,6 +17,7 @@ import confetti from 'canvas-confetti';
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -29,6 +32,16 @@ export const App: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        setIsAuthenticated(false);
+        setIsBootstrapping(false);
+      }
+    });
+
     const bootstrap = async () => {
       try {
         const profile = await AppService.restoreSession();
@@ -47,6 +60,8 @@ export const App: React.FC = () => {
       }
     };
     void bootstrap();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -264,6 +279,17 @@ export const App: React.FC = () => {
     setBoards([]);
     setTasks([]);
   };
+
+  const handlePasswordRecoveryComplete = () => {
+    setIsPasswordRecovery(false);
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    window.alert('Şifreniz güncellendi. Şimdi yeni şifrenizle giriş yapabilirsiniz.');
+  };
+
+  if (isPasswordRecovery) {
+    return <PasswordRecoveryScreen onComplete={handlePasswordRecoveryComplete} />;
+  }
 
   if (isBootstrapping) {
     return (
