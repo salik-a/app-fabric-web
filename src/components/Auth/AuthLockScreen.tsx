@@ -1,24 +1,32 @@
 import React, { useState } from 'react';
 import type { UserProfile } from '../../types';
-import { KeyRound, ArrowRight, ShieldCheck, AlertCircle, Mail } from 'lucide-react';
+import { AppService } from '../../services/appService';
+import { KeyRound, ArrowRight, ShieldCheck, AlertCircle, Mail, Loader2 } from 'lucide-react';
 
 interface AuthLockScreenProps {
-  onLogin: (email: string, password: string) => UserProfile;
+  onLogin: (user: UserProfile) => void;
 }
 
 export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('salikalper@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+    setIsLoading(true);
+
     try {
-      setErrorMessage(null);
-      onLogin(email, password);
+      // Login directly against Supabase
+      const user = await AppService.loginWithSupabase(email, password);
+      onLogin(user);
     } catch (err: any) {
       setErrorMessage(err.message || 'Giriş yapılamadı.');
       setPassword('');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -66,7 +74,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
               type="email"
               required
               autoFocus
-              placeholder="salikalper@gmail.com"
+              placeholder="ornek@appfabric.com"
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -106,11 +114,20 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onLogin }) => {
 
           <button
             type="submit"
-            disabled={!email.trim() || !password.trim()}
+            disabled={!email.trim() || !password.trim() || isLoading}
             className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-blue-500/25 flex items-center justify-center space-x-2 transition-all active:scale-98 mt-2"
           >
-            <span>Giriş Yap ve Oturumu Sakla</span>
-            <ArrowRight className="w-4 h-4" />
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Doğrulanıyor...</span>
+              </>
+            ) : (
+              <>
+                <span>Giriş Yap ve Oturumu Sakla</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 

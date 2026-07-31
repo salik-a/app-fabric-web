@@ -23,10 +23,19 @@ interface UserManagementModalProps {
   onClose: () => void;
   currentUser: UserProfile;
   allUsers: UserProfile[];
-  onUpdateProfile: (userId: string, updates: Partial<UserProfile>) => void;
-  onToggleUserAccess: (userId: string) => void;
-  onAddUser: (fullName: string, email: string, passwordInput?: string, avatarUrl?: string) => void;
-  onDeleteUser: (userId: string) => void;
+  onUpdateProfile: (
+    userId: string,
+    updates: Partial<UserProfile>,
+    newPassword?: string
+  ) => Promise<void>;
+  onToggleUserAccess: (userId: string) => Promise<void>;
+  onAddUser: (
+    fullName: string,
+    email: string,
+    password: string,
+    avatarUrl?: string
+  ) => Promise<void>;
+  onDeleteUser: (userId: string) => Promise<void>;
 }
 
 export const UserManagementModal: React.FC<UserManagementModalProps> = ({
@@ -45,48 +54,67 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [fullName, setFullName] = useState(currentUser.full_name);
   const [email, setEmail] = useState(currentUser.email);
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatar_url);
-  const [password, setPassword] = useState(currentUser.password || '1234');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
   // New User Form State
   const [newFullName, setNewFullName] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('1234');
+  const [newPassword, setNewPassword] = useState('');
   const [newAvatarUrl, setNewAvatarUrl] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setFullName(currentUser.full_name);
     setEmail(currentUser.email);
     setAvatarUrl(currentUser.avatar_url);
-    setPassword(currentUser.password || '1234');
+    setPassword('');
   }, [currentUser, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateProfile(currentUser.id, {
-      full_name: fullName.trim(),
-      email: email.trim(),
-      avatar_url: avatarUrl.trim(),
-      password: password.trim()
-    });
-
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    setIsSaving(true);
+    try {
+      await onUpdateProfile(
+        currentUser.id,
+        {
+          full_name: fullName.trim(),
+          email: email.trim(),
+          avatar_url: avatarUrl.trim()
+        },
+        password || undefined
+      );
+      setPassword('');
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2500);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newFullName.trim() && newEmail.trim()) {
-      onAddUser(newFullName.trim(), newEmail.trim(), newPassword.trim(), newAvatarUrl.trim());
-      setNewFullName('');
-      setNewEmail('');
-      setNewPassword('1234');
-      setNewAvatarUrl('');
-      setActiveTab('users');
+      setIsSaving(true);
+      try {
+        await onAddUser(
+          newFullName.trim(),
+          newEmail.trim(),
+          newPassword,
+          newAvatarUrl.trim()
+        );
+        setNewFullName('');
+        setNewEmail('');
+        setNewPassword('');
+        setNewAvatarUrl('');
+        setActiveTab('users');
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -126,7 +154,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             <span>Kendi Bilgilerim & Şifrem</span>
           </button>
 
-          <button
+          {currentUser.role === 'admin' && <button
             onClick={() => setActiveTab('users')}
             className={`px-4 py-3 font-semibold text-xs border-b-2 flex items-center space-x-2 transition-all ${
               activeTab === 'users'
@@ -136,9 +164,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           >
             <UserCheck className="w-4 h-4" />
             <span>Kullanıcı İzinleri ({allUsers.length})</span>
-          </button>
+          </button>}
 
-          <button
+          {currentUser.role === 'admin' && <button
             onClick={() => setActiveTab('add_user')}
             className={`px-4 py-3 font-semibold text-xs border-b-2 flex items-center space-x-2 transition-all ${
               activeTab === 'add_user'
@@ -148,7 +176,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           >
             <UserPlus className="w-4 h-4" />
             <span>Yeni Kullanıcı Ekle</span>
-          </button>
+          </button>}
         </div>
 
         {/* Tab Content */}
@@ -170,7 +198,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   <h4 className="font-bold text-sm text-white">{fullName || 'Kullanıcı'}</h4>
                   <p className="text-xs text-slate-400">{email}</p>
                   <span className="inline-block mt-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-500/30">
-                    Sistem Yöneticisi (Admin)
+                    {currentUser.role === 'admin' ? 'Sistem Yöneticisi' : 'Kullanıcı'}
                   </span>
                 </div>
               </div>
@@ -206,7 +234,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center space-x-1.5">
                   <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Giriş Şifreniz</span>
+                  <span>Yeni Şifre (Değiştirmeyecekseniz Boş Bırakın)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -214,7 +242,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-3.5 pr-10 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-amber-500"
-                    required
+                    minLength={8}
                   />
                   <button
                     type="button"
@@ -244,6 +272,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               <div className="pt-2 flex items-center justify-end">
                 <button
                   type="submit"
+                  disabled={isSaving}
                   className="flex items-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95"
                 >
                   {isSaved ? (
@@ -263,7 +292,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           )}
 
           {/* TAB 2: User Permissions & Deletion */}
-          {activeTab === 'users' && (
+          {currentUser.role === 'admin' && activeTab === 'users' && (
             <div className="space-y-3">
               <p className="text-xs text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800 leading-relaxed">
                 🔒 <strong>Kullanıcı Yönetimi:</strong> Kullanıcıların erişim izinlerini yönetebilir veya kilit simgesine basarak engelleyebilir / çöp kutusu simgesiyle kullanıcıyı tamamen silebilirsiniz.
@@ -315,7 +344,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                         {!isCurrent && (
                           <>
                             <button
-                              onClick={() => onToggleUserAccess(user.id)}
+                              onClick={() => void onToggleUserAccess(user.id)}
                               className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
                                 user.is_allowed
                                   ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/30'
@@ -333,7 +362,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                     `"${user.full_name}" kullanıcısını ve tüm verilerini silmek istediğinizden emin misiniz?`
                                   )
                                 ) {
-                                  onDeleteUser(user.id);
+                                  void onDeleteUser(user.id);
                                 }
                               }}
                               className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors"
@@ -352,7 +381,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           )}
 
           {/* TAB 3: Add New User Form with Toggleable Password Field */}
-          {activeTab === 'add_user' && (
+          {currentUser.role === 'admin' && activeTab === 'add_user' && (
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="p-3 bg-blue-950/40 border border-blue-800/40 rounded-xl text-xs text-slate-300">
                 ➕ Ekleyeceğiniz yeni kullanıcının adı, e-posta adresi ve giriş şifresi tanımlanır. Kullanıcı kendi e-postası ve şifresi ile sisteme giriş yapabilir.
@@ -393,11 +422,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 <div className="relative">
                   <input
                     type={showNewPassword ? 'text' : 'password'}
-                    placeholder="1234"
+                    placeholder="En az 8 karakter"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full pl-3.5 pr-10 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
                     required
+                    minLength={8}
                   />
                   <button
                     type="button"
@@ -426,7 +456,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={!newFullName.trim() || !newEmail.trim() || !newPassword.trim()}
+                  disabled={
+                    isSaving ||
+                    !newFullName.trim() ||
+                    !newEmail.trim() ||
+                    newPassword.length < 8
+                  }
                   className="flex items-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-md transition-colors"
                 >
                   <UserPlus className="w-4 h-4" />

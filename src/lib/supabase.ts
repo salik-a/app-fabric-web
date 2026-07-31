@@ -1,44 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
-import type { UserProfile, Board, Task, LandscapeWallpaper } from '../types';
+import type { Board, Task, LandscapeWallpaper } from '../types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://bjhfsqgslbvvgcwwfmpp.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqaGZzcWdzbGJ2dmdjd3dmbXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MDE1NTYsImV4cCI6MjEwMDk3NzU1Nn0.HdoJsAlwqSKqiMMQuth4t3ssnci8lDlrpCvN1neLc3o';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  throw new Error(
+    'Supabase yapılandırması eksik. VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY değerlerini tanımlayın.'
+  );
+}
 
-// Predefined users (Salika is primary admin with salikalper@gmail.com)
-export const PREDEFINED_USERS: UserProfile[] = [
-  {
-    id: 'usr_salika',
-    email: 'salikalper@gmail.com',
-    full_name: 'Salika',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
-    role: 'admin',
-    is_allowed: true,
-    password: '1234' // Default password for Salika (editable anytime)
-  },
-  {
-    id: 'usr_ahmet',
-    email: 'ahmet@appfabric.com',
-    full_name: 'Ahmet Yılmaz',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
-    role: 'user',
-    is_allowed: true,
-    password: '1234'
-  },
-  {
-    id: 'usr_zeynep',
-    email: 'zeynep@appfabric.com',
-    full_name: 'Zeynep Kaya',
-    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    background_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80',
-    role: 'user',
-    is_allowed: true,
-    password: '1234'
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
   }
-];
+});
 
 export const LANDSCAPE_WALLPAPERS: LandscapeWallpaper[] = [
   {

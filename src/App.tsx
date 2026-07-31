@@ -4,7 +4,6 @@ import { AppService } from './services/appService';
 import { Navbar } from './components/Header/Navbar';
 import { BoardColumn } from './components/Board/BoardColumn';
 import { AddBoardCard } from './components/Board/AddBoardCard';
-import { LoginModal } from './components/Auth/LoginModal';
 import { AuthLockScreen } from './components/Auth/AuthLockScreen';
 import { BackgroundPickerModal } from './components/Background/BackgroundPickerModal';
 import { TaskDetailModal } from './components/Task/TaskDetailModal';
@@ -14,134 +13,191 @@ import type { DropResult } from '@hello-pangea/dnd';
 import confetti from 'canvas-confetti';
 
 export const App: React.FC = () => {
-  // --- Master Authentication State ---
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
-    AppService.isAuthenticated()
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
 
-  // --- States ---
-  const [allUsers, setAllUsers] = useState<UserProfile[]>(() => AppService.getUsers());
-  const [currentUser, setCurrentUser] = useState<UserProfile>(() => AppService.getActiveUser());
-  const [backgroundUrl, setBackgroundUrl] = useState<string>(() =>
-    AppService.getUserBackground(currentUser.id)
-  );
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [backgroundUrl, setBackgroundUrl] = useState<string>('');
 
-  const [boards, setBoards] = useState<Board[]>(() => AppService.getBoards());
-  const [tasks, setTasks] = useState<Task[]>(() => AppService.getTasks());
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   // Modals
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
   const [isBgPickerOpen, setIsBgPickerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // Sync background when user changes
   useEffect(() => {
-    const bg = AppService.getUserBackground(currentUser.id);
-    setBackgroundUrl(bg);
+    const bootstrap = async () => {
+      try {
+        const profile = await AppService.restoreSession();
+        if (!profile) return;
+        const syncedUsers = await AppService.syncFromSupabase();
+        setAllUsers(syncedUsers);
+        setCurrentUser(profile);
+        setBackgroundUrl(AppService.getUserBackground(profile.id));
+        setBoards(AppService.getBoards());
+        setTasks(AppService.getTasks());
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Oturum geri yüklenemedi:', error);
+      } finally {
+        setIsBootstrapping(false);
+      }
+    };
+    void bootstrap();
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      setBackgroundUrl(AppService.getUserBackground(currentUser.id));
+    }
   }, [currentUser]);
 
-  // Master Login Handler (Email & Password)
-  const handleLogin = (emailInput: string, passwordInput: string): UserProfile => {
-    const user = AppService.loginWithEmailAndPassword(emailInput, passwordInput);
+  const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
-    return user;
-  };
-
-  // --- User Management Handlers ---
-  const handleSelectUser = (user: UserProfile) => {
-    try {
-      AppService.setActiveUser(user);
-      setCurrentUser(user);
-    } catch (err: any) {
-      alert(err.message || 'Giriş yapılamadı.');
-    }
-  };
-
-  const handleUpdateProfile = (userId: string, updates: Partial<UserProfile>) => {
-    const updatedUsers = AppService.updateUserProfile(userId, updates);
-    setAllUsers(updatedUsers);
-    const updatedActive = AppService.getActiveUser();
-    setCurrentUser(updatedActive);
-  };
-
-  const handleToggleUserAccess = (userId: string) => {
-    const updatedUsers = AppService.toggleUserAccess(userId);
-    setAllUsers(updatedUsers);
-  };
-
-  const handleAddUser = (fullName: string, email: string, passwordInput?: string, avatarUrl?: string) => {
-    const updatedUsers = AppService.addUser(fullName, email, passwordInput, avatarUrl);
-    setAllUsers(updatedUsers);
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    try {
-      const updatedUsers = AppService.deleteUser(userId);
-      setAllUsers(updatedUsers);
-      setTasks(AppService.getTasks());
-    } catch (err: any) {
-      alert(err.message || 'Kullanıcı silinemedi.');
-    }
-  };
-
-  const handleSelectBackground = (url: string) => {
-    setBackgroundUrl(url);
-    AppService.setUserBackground(currentUser.id, url);
-  };
-
-  // Boards CRUD
-  const handleAddBoard = (title: string) => {
-    AppService.addBoard(title);
+    setAllUsers(AppService.getUsers());
     setBoards(AppService.getBoards());
-  };
-
-  const handleUpdateBoardTitle = (boardId: string, title: string) => {
-    const updated = AppService.updateBoard(boardId, { title });
-    setBoards(updated);
-  };
-
-  const handleUpdateBoardColor = (boardId: string, color: string) => {
-    const updated = AppService.updateBoard(boardId, { color });
-    setBoards(updated);
-  };
-
-  const handleDeleteBoard = (boardId: string) => {
-    const updatedBoards = AppService.deleteBoard(boardId);
-    setBoards(updatedBoards);
     setTasks(AppService.getTasks());
   };
 
-  // Tasks CRUD
-  const handleAddTask = (boardId: string, title: string) => {
-    AppService.addTask(boardId, title, currentUser.id);
-    setTasks(AppService.getTasks());
+  const handleUpdateProfile = async (
+    userId: string,
+    updates: Partial<UserProfile>,
+    newPassword?: string
+  ) => {
+    try {
+      const updatedUsers = await AppService.updateUserProfile(userId, updates, newPassword);
+      setAllUsers(updatedUsers);
+      setCurrentUser(AppService.getActiveUser());
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Profil güncellenemedi.');
+      throw error;
+    }
   };
 
-  const handleToggleCompleteTask = (taskId: string, e: React.MouseEvent) => {
+  const handleToggleUserAccess = async (userId: string) => {
+    try {
+      setAllUsers(await AppService.toggleUserAccess(userId));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Kullanıcı izni güncellenemedi.');
+    }
+  };
+
+  const handleAddUser = async (
+    fullName: string,
+    email: string,
+    password: string,
+    avatarUrl?: string
+  ) => {
+    try {
+      setAllUsers(await AppService.addUser(fullName, email, password, avatarUrl));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Kullanıcı oluşturulamadı.');
+      throw error;
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      setAllUsers(await AppService.deleteUser(userId));
+      const syncedUsers = await AppService.syncFromSupabase();
+      setAllUsers(syncedUsers);
+      setTasks(AppService.getTasks());
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Kullanıcı silinemedi.');
+    }
+  };
+
+  const handleSelectBackground = async (url: string) => {
+    if (!currentUser) return;
+    try {
+      await AppService.setUserBackground(currentUser.id, url);
+      setBackgroundUrl(url);
+      setCurrentUser(AppService.getActiveUser());
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Arka plan kaydedilemedi.');
+    }
+  };
+
+  const handleAddBoard = async (title: string) => {
+    if (!currentUser) return;
+    try {
+      await AppService.addBoard(title, currentUser.id);
+      setBoards(AppService.getBoards());
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Pano eklenemedi.');
+    }
+  };
+
+  const handleUpdateBoardTitle = async (boardId: string, title: string) => {
+    try {
+      setBoards(await AppService.updateBoard(boardId, { title }));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Pano güncellenemedi.');
+    }
+  };
+
+  const handleUpdateBoardColor = async (boardId: string, color: string) => {
+    try {
+      setBoards(await AppService.updateBoard(boardId, { color }));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Pano rengi güncellenemedi.');
+    }
+  };
+
+  const handleDeleteBoard = async (boardId: string) => {
+    try {
+      setBoards(await AppService.deleteBoard(boardId));
+      setTasks(AppService.getTasks());
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Pano silinemedi.');
+    }
+  };
+
+  const handleAddTask = async (boardId: string, title: string) => {
+    if (!currentUser) return;
+    try {
+      await AppService.addTask(boardId, title, currentUser.id);
+      setTasks(AppService.getTasks());
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Görev eklenemedi.');
+    }
+  };
+
+  const handleToggleCompleteTask = async (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const taskBefore = tasks.find((t) => t.id === taskId);
-    const updated = AppService.toggleTaskCompletion(taskId);
-    setTasks(updated);
-
-    if (taskBefore && !taskBefore.is_completed) {
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.7 }
-      });
+    try {
+      setTasks(await AppService.toggleTaskCompletion(taskId));
+      if (taskBefore && !taskBefore.is_completed) {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 }
+        });
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Görev güncellenemedi.');
     }
   };
 
-  const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
-    const updated = AppService.updateTask(taskId, updates);
-    setTasks(updated);
+  const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      setTasks(await AppService.updateTask(taskId, updates));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Görev güncellenemedi.');
+    }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    const updated = AppService.deleteTask(taskId);
-    setTasks(updated);
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      setTasks(await AppService.deleteTask(taskId));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Görev silinemedi.');
+    }
   };
 
   // --- Drag and Drop Logic ---
@@ -164,7 +220,9 @@ export const App: React.FC = () => {
       }));
 
       setBoards(updatedWithPositions);
-      AppService.saveBoards(updatedWithPositions);
+      void AppService.saveBoards(updatedWithPositions).catch((error) => {
+        alert(error instanceof Error ? error.message : 'Pano sırası kaydedilemedi.');
+      });
       return;
     }
 
@@ -191,14 +249,34 @@ export const App: React.FC = () => {
       );
 
       setTasks(finalTasks);
-      AppService.saveTasks(finalTasks);
+      void AppService.saveTasks(finalTasks).catch((error) => {
+        alert(error instanceof Error ? error.message : 'Görev sırası kaydedilemedi.');
+      });
     }
   };
 
-  // Render Authentication Lock Screen if not authenticated
+  // Logout Handler
+  const handleLogout = async () => {
+    await AppService.logout();
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setAllUsers([]);
+    setBoards([]);
+    setTasks([]);
+  };
+
+  if (isBootstrapping) {
+    return (
+      <div className="h-screen w-screen bg-slate-950 text-slate-300 flex items-center justify-center">
+        Güvenli oturum doğrulanıyor...
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return <AuthLockScreen onLogin={handleLogin} />;
   }
+  if (!currentUser) return null;
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative select-none">
@@ -213,9 +291,9 @@ export const App: React.FC = () => {
       {/* Top Navbar */}
       <Navbar
         currentUser={currentUser}
-        onOpenAuth={() => setIsAuthOpen(true)}
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenBackgroundPicker={() => setIsBgPickerOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Horizontal Boards Scroll Container */}
@@ -259,14 +337,6 @@ export const App: React.FC = () => {
       </main>
 
       {/* Modals */}
-      <LoginModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        currentUser={currentUser}
-        allUsers={allUsers}
-        onSelectUser={handleSelectUser}
-      />
-
       <UserManagementModal
         isOpen={isUserManagementOpen}
         onClose={() => setIsUserManagementOpen(false)}

@@ -1,20 +1,20 @@
 import React from 'react';
 import type { UserProfile } from '../../types';
-import { Image, Shield, LogIn } from 'lucide-react';
+import { Image, Shield, LogOut } from 'lucide-react';
 import appLogo from '../../assets/appfabric_logo.jpg';
 
 interface NavbarProps {
   currentUser: UserProfile;
-  onOpenAuth: () => void;
   onOpenUserManagement: () => void;
   onOpenBackgroundPicker: () => void;
+  onLogout: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
-  onOpenAuth,
   onOpenUserManagement,
-  onOpenBackgroundPicker
+  onOpenBackgroundPicker,
+  onLogout
 }) => {
   return (
     <header className="h-16 px-4 md:px-6 glass-header flex items-center justify-between border-b border-white/10 text-white z-20 shrink-0">
@@ -65,12 +65,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span className="hidden md:inline">Profil & Kullanıcılar</span>
         </button>
 
-        {/* Active User Profile Badge */}
-        <button
-          onClick={onOpenAuth}
-          className="flex items-center space-x-2.5 px-3 py-1.5 rounded-xl bg-slate-900/60 hover:bg-slate-900/80 border border-white/15 text-white text-xs font-medium backdrop-blur-lg transition-all duration-200 shadow-sm active:scale-95 group"
-          title="Kullanıcı Değiştir / Oturum"
-        >
+        {/* Active authenticated user */}
+        <div className="flex items-center space-x-2.5 px-3 py-1.5 rounded-xl bg-slate-900/60 border border-white/15 text-white text-xs font-medium backdrop-blur-lg shadow-sm">
           <img
             src={currentUser.avatar_url}
             alt={currentUser.full_name}
@@ -84,9 +80,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               {currentUser.email}
             </div>
           </div>
-          <div className="p-1 rounded-md bg-white/10 group-hover:bg-white/20 text-slate-300 transition-colors">
-            <LogIn className="w-3.5 h-3.5" />
-          </div>
+        </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={() => {
+            if (window.confirm('Oturumunuzu kapatmak istediğinizden emin misiniz?')) {
+              onLogout();
+            }
+          }}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 text-xs font-semibold backdrop-blur-md transition-all duration-200 border border-rose-400/20 active:scale-95"
+          title="Oturumu Kapat"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="hidden md:inline">Çıkış</span>
         </button>
       </div>
     </header>
